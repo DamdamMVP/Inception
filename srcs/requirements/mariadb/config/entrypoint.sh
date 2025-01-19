@@ -1,15 +1,15 @@
 #!/bin/sh
 
-# Initialiser la base de données si elle n'existe pas
+# Vérifie si la DB système MySQL existe déjà
 if [ ! -d "/var/lib/mysql/mysql" ]; then
-    # Initialisation de la base de données
+    echo ">>> [Entrypoint] Initialisation de la base de données..."
     mysql_install_db --user=mysql --datadir=/var/lib/mysql
 
-    # Démarrer MySQL temporairement
+    echo ">>> [Entrypoint] Démarrage provisoire de MariaDB (skip-networking)..."
     mysqld --user=mysql --datadir=/var/lib/mysql --skip-networking &
     pid="$!"
 
-    # Attendre que MySQL démarre
+    # Attendre que MySQL soit prêt
     for i in {30..0}; do
         if echo 'SELECT 1' | mysql &> /dev/null; then
             break
@@ -18,21 +18,18 @@ if [ ! -d "/var/lib/mysql/mysql" ]; then
     done
 
     if [ "$i" = 0 ]; then
-        echo >&2 'MySQL init process failed.'
+        echo >&2 ">>> [Entrypoint] Échec: MySQL n'a pas démarré."
         exit 1
     fi
 
-    # Configurer la base de données
+    echo ">>> [Entrypoint] Configuration de la base utilisateur..."
     mysql <<EOF
--- Créer la base de données
-CREATE DATABASE IF NOT EXISTS ${MYSQL_DATABASE};
+CREATE DATABASE IF NOT EXISTS ${MYSQL_DATABASE} CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
 
--- Créer l'utilisateur WordPress et donner les permissions
-CREATE USER '${MYSQL_USER}'@'%' IDENTIFIED BY '${MYSQL_PASSWORD}';
+CREATE USER IF NOT EXISTS '${MYSQL_USER}'@'%' IDENTIFIED BY '${MYSQL_PASSWORD}';
 GRANT ALL PRIVILEGES ON ${MYSQL_DATABASE}.* TO '${MYSQL_USER}'@'%';
 
--- Sécuriser l'utilisateur root
-CREATE USER 'root'@'localhost' IDENTIFIED BY '${MYSQL_ROOT_PASSWORD}';
+CREATE USER IF NOT EXISTS 'root'@'localhost' IDENTIFIED BY '${MYSQL_ROOT_PASSWORD}';
 GRANT ALL PRIVILEGES ON *.* TO 'root'@'localhost' WITH GRANT OPTION;
 DELETE FROM mysql.user WHERE User='';
 DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost');
@@ -40,12 +37,14 @@ DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost');
 FLUSH PRIVILEGES;
 EOF
 
-    # Arrêter MySQL temporaire
+    echo ">>> [Entrypoint] Arrêt du serveur provisoire..."
     if ! kill -s TERM "$pid" || ! wait "$pid"; then
-        echo >&2 'MySQL init process failed.'
+        echo >&2 ">>> [Entrypoint] Échec lors de l'arrêt de MySQL après init."
         exit 1
     fi
+    echo ">>> [Entrypoint] Initialisation terminée."
 fi
 
-# Démarrer MySQL normalement
+# Enfin, on lance MariaDB "normalement" sur le port 3306
+echo ">>> [Entrypoint] Lancement de MariaDB..."
 exec mysqld --user=mysql --console
