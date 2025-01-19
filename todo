@@ -1,0 +1,64 @@
+# Sheet des commandes Docker Inception
+
+## Gestion des Conteneurs
+
+### Docker compose ps
+
+* `docker-compose ps` : Affiche la liste des conteneurs actifs.
+
+### Lancer les Conteneurs
+
+* `docker-compose up -d --build` : Construit et lance les conteneurs en arrière-plan.
+
+### Arrêter les Conteneurs
+
+* `docker-compose down` : Arrête et supprime les conteneurs et le réseau, mais conserve les volumes.
+
+### Nettoyer Complètement l'Environnement
+
+* `docker-compose down -v` : Arrête et supprime les conteneurs, le réseau et les volumes.
+
+### Afficher les Logs d'un Service
+
+* `docker-compose logs [service]` : Affiche les logs du service spécifié (e.g. `nginx`, `wordpress`, `mariadb`).
+
+### Exécuter une Commande dans un Conteneur
+
+* `docker-compose exec [service] [commande]` : Exécute une commande dans le conteneur en cours (e.g. accéder au shell).
+
+## Gestion des Images Docker
+
+### Construire une Image Docker
+
+* `docker build -t [nom_image] [chemin_du_Dockerfile]` : Construit une image Docker à partir d'un Dockerfile situé dans le chemin spécifié.
+
+### Supprimer une Image Docker
+
+* `docker rmi [nom_image]` : Supprime l'image Docker spécifiée.
+
+### Lister Toutes les Images Docker
+
+* `docker images` : Affiche toutes les images Docker présentes sur la machine.
+
+## Gestion des Volumes Docker
+
+### Inspecter un Volume Docker
+
+* `docker volume inspect [volume_name]` : Affiche les détails d'un volume Docker spécifique, y compris le chemin physique sur l'hôte.
+
+## Gestion des Utilisateurs et Groupes
+
+### Créer un Utilisateur `www-data` dans WordPress Dockerfile
+
+* `if ! getent group www-data > /dev/null 2>&1; then addgroup -S www-data; fi && if ! getent passwd www-data > /dev/null 2>&1; then adduser -S -G www-data www-data; fi` : Crée le groupe et l'utilisateur `www-data` si ils n'existent pas déjà.
+
+### Changer le Propriétaire d'un Répertoire
+
+* `sudo chown -R www-data:www-data /home/dalebran/data/wordpress` : Change récursivement le propriétaire et le groupe du répertoire à `www-data`.
+
+## Conseils Supplémentaires
+
+* **Évitez d'utiliser `chmod 777`** : Préférez des permissions plus restrictives comme `755` ou `775` avec le bon propriétaire (`www-data`) pour des raisons de sécurité.
+* **Vérifiez régulièrement les logs** : Utilisez `docker-compose logs [service]` pour diagnostiquer les problèmes.
+* **Testez la connectivité** : Utilisez `ping` et `curl` pour vérifier la communication entre les conteneurs.
+* **Utilisez le Makefile** : Simplifiez les opérations fréquentes avec des cibles comme `make up`, `make down`, `make clean`, etc.
